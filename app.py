@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import messagebox, ttk
 import sqlite3
 import pandas as pd
+from openpyxl import Workbook
+from openpyxl.utils.dataframe import dataframe_to_rows
 
 class CelularApp:
     def __init__(self, root):
@@ -16,7 +18,7 @@ class CelularApp:
                             id INTEGER PRIMARY KEY,
                             modelo TEXT,
                             marca TEXT,
-                            defeito BOOLEAN,
+                            defeito INTEGER,
                             observacao TEXT
                             )''')
         self.conn.commit()
@@ -53,7 +55,7 @@ class CelularApp:
     def cadastrar_celular(self):
         modelo = self.entry_modelo.get()
         marca = self.entry_marca.get()
-        defeito = self.defeito_var.get()
+        defeito = 1 if self.defeito_var.get() else 0
         observacao = self.entry_observacao.get()
 
         self.c.execute("INSERT INTO celulares (modelo, marca, defeito, observacao) VALUES (?, ?, ?, ?)",
@@ -74,7 +76,14 @@ class CelularApp:
         df = pd.DataFrame(celulares, columns=['Modelo', 'Marca', 'Defeito', 'Observação'])
 
         file_path = "relatorio_celulares.xlsx"
-        df.to_excel(file_path, index=False)
+        wb = Workbook()
+        ws = wb.active
+
+        # Converter o DataFrame em linhas e adicionar ao Excel
+        for r in dataframe_to_rows(df, index=False, header=True):
+            ws.append(r)
+
+        wb.save(file_path)
 
         messagebox.showinfo("Relatório", f"Relatório gerado com sucesso!\nSalvo em: {file_path}")
 
@@ -95,6 +104,11 @@ class CelularApp:
             self.tree.insert('', 'end', values=celular)
 
         self.tree.pack(padx=10, pady=10, fill='both', expand=True)
+
+        self.mostrar_cadastros_window.protocol("WM_DELETE_WINDOW", self.fechar_mostrar_cadastros)
+
+    def fechar_mostrar_cadastros(self):
+        self.mostrar_cadastros_window.destroy()
 
     def __del__(self):
         self.conn.close()
